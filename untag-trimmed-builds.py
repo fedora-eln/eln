@@ -8,6 +8,10 @@ import requests
 
 
 DEBUG = False
+# to prevent an unfortunate situation, if the ratio of undesired builds to
+# the current total number of builds in the given tag exceeds FORCE_THRESHOLD,
+# then the --force option must be supplied to complete the untagging operation
+FORCE_THRESHOLD = 0.5
 
 
 def get_desired_packages(distro_url, distro_view, arches):
@@ -50,7 +54,7 @@ def get_desired_packages(distro_url, distro_view, arches):
     return merged_builds
 
 
-def get_undesired_builds(session, koji_tag, desired_pkgs):
+def get_undesired_builds(session, koji_tag, desired_pkgs, force):
     """
     Fetches the list of undesired builds currently tagged with
     'koji_tag'.
@@ -80,6 +84,7 @@ def get_undesired_builds(session, koji_tag, desired_pkgs):
 
     # get all builds with tag
     builds = session.listTagged(koji_tag)
+    num_current_builds = len(builds)
 
     for binfo in builds:
         pkg = binfo["package_name"]
@@ -93,6 +98,29 @@ def get_undesired_builds(session, koji_tag, desired_pkgs):
                 print("PACKAGE BUILD {} NEEDS TO BE REMOVED FROM TAG".format(nvr))
 
             undesired_builds.add(nvr)
+
+    num_undesired_builds = len(undesired_builds)
+    undesired_ratio = num_undesired_builds / num_current_builds
+
+    print(
+        "Koji tag {} currently has {} builds, {} ({:.2%}) of which are undesired".format(
+            koji_tag,
+            num_current_builds,
+            num_undesired_builds,
+            undesired_ratio
+        )
+    )
+
+    if undesired_ratio > FORCE_THRESHOLD:
+        print(
+            "WARNING: Undesired build ratio is above safety threshold"
+            " ({:.2%})".format(FORCE_THRESHOLD)
+        )
+        if force:
+            print("--force option has been set. Proceeding.")
+        else:
+            print("Use --force option if you wish to proceed despite this warning.")
+            return None
 
     return undesired_builds
 
@@ -108,12 +136,13 @@ def untag_builds(session, koji_tag, dry_run, builds):
     :param builds: list of builds to untag
     :type desired_pkgs: set
     """
-    for nvr in sorted(builds):
-        if dry_run:
-            print("Would have untagged {}".format(nvr))
-        else:
-            print("Untagging {}".format(nvr))
-            session.untagBuild(koji_tag, nvr)
+    with session.multicall() as m:
+        for nvr in sorted(builds):
+            if dry_run:
+                print("Would have untagged {}".format(nvr))
+            else:
+                print("Untagging {}".format(nvr))
+                m.untagBuild(koji_tag, nvr)
 
 
 @click.command()
@@ -148,7 +177,14 @@ def untag_builds(session, koji_tag, dry_run, builds):
               help="The architectures to include",
               show_default=True,
               default=["aarch64", "armv7hl", "ppc64le", "s390x", "x86_64"])
-def cli(dry_run, debug, koji_url, koji_tag, distro_url, distro_view, arches):
+@click.option("--force",
+              is_flag=True,
+              help=(
+                  "Force untagging even if removal ratio exceeds"
+                  " threshold ({:.2%})").format(FORCE_THRESHOLD),
+              show_default=True,
+              default=False)
+def cli(dry_run, debug, koji_url, koji_tag, distro_url, distro_view, arches, force):
     """
     Automated removal of packages from koji tag that have been trimmed from
     distribution.
@@ -156,11 +192,24 @@ def cli(dry_run, debug, koji_url, koji_tag, distro_url, distro_view, arches):
     global DEBUG
     DEBUG = debug
 
+    session = koji.ClientSession(koji_url)
+    try:
+        session.gssapi_login()
+    except:
+        print("ERROR: an authentication has occurred")
+    if not session.logged_in:
+        print(
+            "Unable to log in to Koji."
+            " Did you forget to run 'kinit fasname@FEDORAPROJECT.ORG'?"
+        )
+        return
+
     desired_pkgs = get_desired_packages(distro_url, distro_view, arches)
 
-    session = koji.ClientSession(koji_url)
-
-    builds_to_untag = get_undesired_builds(session, koji_tag, desired_pkgs)
+    builds_to_untag = get_undesired_builds(session, koji_tag, desired_pkgs, force)
+    if not builds_to_untag:
+        print("No builds to untag")
+        return
 
     if DEBUG:
         print("Builds to untag: {}".format(builds_to_untag))
