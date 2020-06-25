@@ -74,7 +74,7 @@ def get_failure_details(session, task_id):
               show_default=True,
               default='https://koji.fedoraproject.org/kojihub')
 @click.option('--output-format',
-              type=click.Choice(['packages', 'yaml'], case_sensitive=False),
+              type=click.Choice(['packages', 'json'], case_sensitive=False),
               help='The output format to print',
               show_default=True,
               default='packages')
@@ -126,7 +126,7 @@ def cli(debug, fas_user, koji_url, output_format, release_filter):
                                        'subtasks': get_failure_details(session, candidate['task_id'])}
 
     # Output the failed builds
-    if output_format == 'yaml':
+    if output_format == 'json':
         print('{}'.format(json.dumps(failed_builds, indent=2)))
     else:
         for package_name in sorted(failed_builds.keys()):
