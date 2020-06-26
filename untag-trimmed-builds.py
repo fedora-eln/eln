@@ -4,54 +4,20 @@
 
 import click
 import koji
-import requests
+import logging
+import os
+import sys
+
+from get_distro_packages import get_distro_packages
 
 
-DEBUG = False
+logger = logging.getLogger(os.path.basename(__file__))
+
+
 # to prevent an unfortunate situation, if the ratio of undesired builds to
 # the current total number of builds in the given tag exceeds FORCE_THRESHOLD,
 # then the --force option must be supplied to complete the untagging operation
 FORCE_THRESHOLD = 0.5
-
-
-def get_desired_packages(distro_url, distro_view, arches):
-    """
-    Fetches the list of desired sources for 'distro-view' from 'distro-url'
-    for each of the given 'arches'.
-
-    :param distro_url: top level of the content resolver
-    :type distro_url: str
-    :param distro_view: content resolver view
-    :type distro_view: str
-    :param arches: architectures to include
-    :type arches: tuple
-    :return: list of packages that are desired, merged for all 'arches'
-    :rtype: set
-
-    """
-    print(
-        "Downloading and merging desired {distro_view} sources"
-        " for arches: {arches}".format(
-            distro_view=distro_view, arches=", ".join(arches)
-        )
-    )
-
-    merged_builds = set()
-
-    for arch in arches:
-        url = (
-            "{distro_url}"
-            "/view-source-package-name-list--view-{distro_view}--{arch}.txt"
-        ).format(distro_url=distro_url, distro_view=distro_view, arch=arch)
-
-        if DEBUG:
-            print("downloading {url}".format(url=url))
-
-        r = requests.get(url, allow_redirects=True)
-        for line in r.text.splitlines():
-            merged_builds.add(line)
-
-    return merged_builds
 
 
 def get_undesired_builds(session, koji_tag, desired_pkgs, force):
@@ -86,16 +52,18 @@ def get_undesired_builds(session, koji_tag, desired_pkgs, force):
     builds = session.listTagged(koji_tag)
     num_current_builds = len(builds)
 
+    # if no current builds, none are undesired so return empty set
+    if num_current_builds == 0:
+        return undesired_builds
+
     for binfo in builds:
         pkg = binfo["package_name"]
         nvr = binfo["nvr"]
 
-        if DEBUG:
-            print("Found build of package {} with nvr {}".format(pkg, nvr))
+        logger.debug("Found build of package {} with nvr {}".format(pkg, nvr))
 
         if pkg not in desired_pkgs:
-            if DEBUG:
-                print("PACKAGE BUILD {} NEEDS TO BE REMOVED FROM TAG".format(nvr))
+            logger.debug("PACKAGE BUILD {} NEEDS TO BE REMOVED FROM TAG".format(nvr))
 
             undesired_builds.add(nvr)
 
@@ -119,7 +87,10 @@ def get_undesired_builds(session, koji_tag, desired_pkgs, force):
         if force:
             print("--force option has been set. Proceeding.")
         else:
-            print("Use --force option if you wish to proceed despite this warning.")
+            print(
+                "Use --force option if you wish to proceed despite this warning.",
+                file=sys.stderr
+            )
             return None
 
     return undesired_builds
@@ -189,30 +160,40 @@ def cli(dry_run, debug, koji_url, koji_tag, distro_url, distro_view, arches, for
     Automated removal of packages from koji tag that have been trimmed from
     distribution.
     """
-    global DEBUG
-    DEBUG = debug
+    if debug:
+        logging.basicConfig(format="%(asctime)s:%(levelname)s:%(name)s:%(message)s")
+        logger.setLevel(logging.DEBUG)
+        logger.debug("Debugging mode enabled")
+    else:
+        logging.basicConfig()
 
     session = koji.ClientSession(koji_url)
     try:
         session.gssapi_login()
     except:
-        print("ERROR: an authentication has occurred")
+        print("ERROR: an authentication error has occurred", file=sys.stderr)
     if not session.logged_in:
         print(
             "Unable to log in to Koji."
-            " Did you forget to run 'kinit fasname@FEDORAPROJECT.ORG'?"
+            " Did you forget to run 'kinit fasname@FEDORAPROJECT.ORG'?",
+            file=sys.stderr
         )
         return
 
-    desired_pkgs = get_desired_packages(distro_url, distro_view, arches)
+    print(
+        "Downloading and merging desired {distro_view} sources"
+        " for arches: {arches}".format(
+            distro_view=distro_view, arches=", ".join(arches)
+        )
+    )
+    desired_pkgs = get_distro_packages(distro_url, distro_view, arches, logger=logger)
 
     builds_to_untag = get_undesired_builds(session, koji_tag, desired_pkgs, force)
     if not builds_to_untag:
         print("No builds to untag")
         return
 
-    if DEBUG:
-        print("Builds to untag: {}".format(builds_to_untag))
+    logger.debug("Builds to untag: {}".format(builds_to_untag))
 
     untag_builds(session, koji_tag, dry_run, builds_to_untag)
 
