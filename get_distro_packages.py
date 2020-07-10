@@ -51,13 +51,23 @@ if __name__ == "__main__":
     logger.debug("Debugging mode enabled")
 
     distro_url = "https://tiny.distro.builders"
-    distro_view = "eln-and-buildroot"
+    distro_view = "prototype-eln-and-buildroot"
     arches = ["aarch64", "armv7hl", "ppc64le", "s390x", "x86_64"]
 
+    if len(sys.argv) == 2 and sys.argv[1] == "--help":
+        print("Usage: {} [ distro-view [ distro-url [ 'arches' ] ] ]".format(sys.argv[0]))
+        print("  distro-view  The content resolver view"
+              "  [default: {}]".format(distro_view))
+        print("  distro-url   The top level of the content resolver"
+              "  [default: {}]".format(distro_url))
+        print("  arches       The architectures to include"
+              "  [default: '{}']".format(" ".join(arches)))
+        sys.exit()
+
     if len(sys.argv) > 1:
-        distro_url = sys.argv[1]
+        distro_view = sys.argv[1]
     if len(sys.argv) > 2:
-        distro_view = sys.argv[2]
+        distro_url = sys.argv[2]
     if len(sys.argv) > 3:
         arches = sys.argv[3].split()
 
