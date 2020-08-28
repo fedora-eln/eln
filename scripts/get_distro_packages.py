@@ -26,10 +26,11 @@ def get_distro_packages(distro_url, distro_view, arches, logger=None):
     merged_packages = set()
 
     for arch in arches:
+      for this_source in which_source:
         url = (
             "{distro_url}"
-            "/view-source-package-name-list--view-{distro_view}--{arch}.txt"
-        ).format(distro_url=distro_url, distro_view=distro_view, arch=arch)
+            "/view-{this_source}-package-name-list--view-{distro_view}--{arch}.txt"
+        ).format(distro_url=distro_url, this_source=this_source, distro_view=distro_view, arch=arch)
 
         if logger:
             logger.debug("downloading {url}".format(url=url))
@@ -43,7 +44,6 @@ def get_distro_packages(distro_url, distro_view, arches, logger=None):
 
     return merged_packages
 
-
 if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)s:%(levelname)s:%(name)s:%(message)s")
     logger = logging.getLogger(os.path.basename(__file__))
@@ -51,8 +51,9 @@ if __name__ == "__main__":
     logger.debug("Debugging mode enabled")
 
     distro_url = "https://tiny.distro.builders"
-    distro_view = "prototype-eln-and-buildroot"
+    distro_view = "eln"
     arches = ["aarch64", "armv7hl", "ppc64le", "s390x", "x86_64"]
+    which_source = ["source", "buildroot-source"]
 
     if len(sys.argv) == 2 and sys.argv[1] == "--help":
         print("Usage: {} [ distro-view [ distro-url [ 'arches' ] ] ]".format(sys.argv[0]))
