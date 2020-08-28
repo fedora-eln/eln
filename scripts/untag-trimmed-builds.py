@@ -142,7 +142,7 @@ def untag_builds(session, koji_tag, dry_run, builds):
 @click.option("--distro-view",
               help="The content resolver view",
               show_default=True,
-              default="prototype-eln-and-buildroot")
+              default="eln")
 @click.option("--arches", "--arch",
               multiple=True,
               help="The architectures to include",
