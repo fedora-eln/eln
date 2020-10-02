@@ -51,6 +51,40 @@ def get_filed_bugs(bz, tracking_bug):
     return bz.query(query)
 
 
+def get_comps_subcomp(bz, config):
+    """Query bugzilla for all product components and sub-components.
+    Return a dictionary mapping each component to its first sub-component,
+    or None if has none.
+
+    arguments:
+    bz -- bugzilla client
+    tracking_bug -- bug used to track failures
+    """
+    LOGGER.debug(
+        "Querying for product {} sub-components".format(config["rhel_product"])
+    )
+
+    # query BZ for all of the product components and sub-components
+    pdata = bz.product_get(
+        names=[config["rhel_product"]],
+        include_fields=[
+            "name",
+            "versions.name",
+            "components.name",
+            "components.sub_components",
+        ],
+    )
+
+    comps_dict = {}
+    for comp in pdata[0]["components"]:
+        comps_dict[comp["name"]] = (
+            comp["sub_components"][0]["name"] if comp["sub_components"] else None
+        )
+
+    LOGGER.debug("Returning component:sub-component map:\n{}".format(comps_dict))
+    return comps_dict
+
+
 DEFAULT_SUMMARY = "[ELN] {component}: FTBFS in {product} {version}"
 
 DEFAULT_COMMENT = """{component} failed to build from source in {product} {version}
@@ -85,6 +119,7 @@ def report_failure(
     bz,
     config,
     component,
+    sub_component,
     task_id,
     logs,
     summary=DEFAULT_SUMMARY,
@@ -100,6 +135,7 @@ def report_failure(
     config -- generic info about mass rebuild such as tracking_bug,
     Bugzilla product, version, wikipage
     component -- component (package) to file bug against
+    sub_component -- sub-component to file bug against
     task_id -- task_id of failed build
     logs -- list of URLs to the log file to attach to the bug report
     summary -- short bug summary (if not default)
@@ -130,6 +166,8 @@ def report_failure(
         "bug_file_loc": "",
         "priority": "unspecified",
     }
+    if sub_component:
+        data["sub_component"] = sub_component
     if config["mirror_bugs"]:
         data["flags"] = [
             {"name": "mirror", "status": "+"},
@@ -412,6 +450,7 @@ def cli(
         "Bugs have been previosly filed for: {}".format(eln_filed_bugs_components)
     )
 
+    # get filed Rawhide BZs
     filed_bugs = get_filed_bugs(bz, rawhide_tracking_bug)
     rawhide_open_bugs_components = {
         comp: bug.id
@@ -429,8 +468,15 @@ def cli(
         "Rawhide bugs are still open for: {}".format(rawhide_open_bugs_components)
     )
 
+    # get map of all components
+    comps_subcomp = get_comps_subcomp(bz, config)
+
     for pkg in ftbfs_pkg_list:
         print("Checking package {}".format(pkg))
+
+        if pkg not in comps_subcomp:
+            print("Package {} does not exist in Bugzilla for the product!".format(pkg))
+            continue
 
         if pkg in eln_filed_bugs_components:
             print(
@@ -474,6 +520,7 @@ def cli(
             bz,
             config,
             pkg,
+            comps_subcomp[pkg],
             task_id,
             logs,
             extrainfo=extrainfo,
