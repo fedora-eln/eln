@@ -361,3 +361,7 @@ if __name__ == "__main__":
     with open("rebuild.txt", "w") as f:
         for pkg_info in results.get("NONE", []) + results.get("OLD", []):
             f.write(pkg_info[1] + "\n")
+
+    with open("ftbfs.txt", "w") as f:
+        for pkg_info in results.get("NONE", []):
+            f.write(pkg_info[0] + "\n")
