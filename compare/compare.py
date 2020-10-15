@@ -44,7 +44,7 @@ class BuildSource:
         if source_id == "rhel":
             # FIXME
             infra = koji.ClientSession('https://brewhub.engineering.redhat.com/brewhub')
-            tag = "rhel-9.0.0-alpha-gate"
+            tag = "rhel-9.0.0-alpha-candidate"
 
         return infra, tag
 
@@ -54,9 +54,13 @@ class BuildSource:
         Return None if there is no builds found
         """
 
-        if package in self.cache:
-            logging.debug(f'Read cached for {package} in {self}')
-            return self.cache[package]
+        if self.cache:
+            if package in self.cache:
+                logging.debug(f'Read cached for {package} in {self}')
+                return self.cache[package]
+            else:
+                logging.debug(f'Package {package} not found in cached {self}')
+                return None
 
         builds = self.infra.listTagged(self.tag, package=package, latest=True)
 
@@ -249,7 +253,7 @@ def evr(build):
     epoch = "0"
 
     version = build['version']
-    p = re.compile(".(fc|eln)[0-9]*")
+    p = re.compile(".(fc|eln|el)[0-9]*")
     release = re.sub(p, "", build['release'])
 
     return (epoch, version, release)
