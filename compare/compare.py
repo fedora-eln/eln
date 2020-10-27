@@ -38,6 +38,9 @@ class BuildSource:
         if source_id == "rawhide":
             infra = koji.ClientSession('https://koji.fedoraproject.org/kojihub')
             tag = infra.getFullInheritance('rawhide')[0]['name']
+        if source_id == "eln-side":
+            infra = koji.ClientSession('https://koji.fedoraproject.org/kojihub')
+            tag = "eln-build-side-32813"
         if source_id == "eln":
             infra = koji.ClientSession('https://koji.fedoraproject.org/kojihub')
             tag = "eln"
@@ -307,13 +310,13 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "source1",
-        choices=["rawhide", "eln", "rhel"],
+        choices=["rawhide", "eln", "eln-side", "rhel"],
         help="First source of package builds",
     )
 
     parser.add_argument(
         "source2",
-        choices=["rawhide", "eln", "rhel"],
+        choices=["rawhide", "eln", "eln-side", "rhel"],
         help="Second source of package builds",
     )
 
