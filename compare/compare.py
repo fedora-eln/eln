@@ -233,6 +233,8 @@ def get_content(distro_view="eln"):
 
             r = requests.get(url, allow_redirects=True)
             for line in r.text.splitlines():
+                if not line:
+                    continue
                 merged_packages.add(line)
 
     logging.debug("Found a total of {} packages".format(len(merged_packages)))
