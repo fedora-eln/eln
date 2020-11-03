@@ -37,6 +37,9 @@ def get_distro_packages(distro_url, distro_view, arches, logger=None):
 
         r = requests.get(url, allow_redirects=True)
         for line in r.text.splitlines():
+            # Work around empty lines in Content Resolver output, if present.
+            if not line:
+                continue
             merged_packages.add(line)
 
     if logger:
