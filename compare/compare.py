@@ -116,7 +116,7 @@ class Comparison:
             return {
                 "status": self.status[-2],
                 "nvr1": None,
-                "nvr2": None,
+                "nvr2": None if not build2 else build2['nvr'],
             }
 
         if not build2:
