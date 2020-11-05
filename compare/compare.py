@@ -114,7 +114,7 @@ class Comparison:
         if not build1:
             logging.warning(f'Package {package} not found in {source1}')
             return {
-                "status": self.status[-2],
+                "status": self.status[-2] if not build2 else self.status[-1],
                 "nvr1": None,
                 "nvr2": None if not build2 else build2['nvr'],
             }
