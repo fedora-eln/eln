@@ -82,6 +82,8 @@ class BuildSource:
 class Comparison:
 
     status = {
+        -5: "PREPOP",
+        -4: "NOSYNC",
         -3: "EXTRA",
         -2: "ERROR",
         -1: "NEW",
@@ -94,6 +96,14 @@ class Comparison:
         self.content = content
         self.source1 = source1
         self.source2 = source2
+        # prepop will eventually show up on Content Resolver
+        # https://tiny.distro.builders/view--view-eln.html
+        # For now just use a flat file
+        self.prepop_packagelist = open("lists/prepop.txt").read().splitlines()
+        # The nosync list should be coming from the distrobaker config yaml file 
+        # https://gitlab.cee.redhat.com/osci/distrobaker_config/-/raw/rhel9/distrobaker.yaml
+        # For now just use a flat file
+        self.nosync_packagelist = open("lists/nosync.txt").read().splitlines()
 
         self.results = {}
 
@@ -103,13 +113,29 @@ class Comparison:
         Return dictionary with items: status, nvr1, nvr2.
         """
         if package not in content:
-            logging.warning("Package {package} is not in the content set")
+            logging.warning(f'Package {package} is not in the content set')
 
         if package in self.results:
             return self.results[package]
 
         build1 = self.source1.get_build(package)
         build2 = self.source2.get_build(package)
+
+        if package in self.prepop_packagelist:
+            logging.debug(f'Package {package} pre-populated')
+            return {
+                "status": self.status[-5],
+                "nvr1": None if not build1 else build1['nvr'],
+                "nvr2": None if not build2 else build2['nvr'],
+            }
+
+        if package in self.nosync_packagelist:
+            logging.debug(f'Package {package} is a not synced')
+            return {
+                "status": self.status[-4],
+                "nvr1": None if not build1 else build1['nvr'],
+                "nvr2": None if not build2 else build2['nvr'],
+            }
 
         if not build1:
             logging.warning(f'Package {package} not found in {source1}')
@@ -120,7 +146,7 @@ class Comparison:
             }
 
         if not build2:
-            logging.info(f'Package {package} not found in {source2}')
+            logging.debug(f'Package {package} not found in {source2}')
             return {
                 "status": self.status[2],
                 "nvr1": build1["nvr"],
@@ -142,8 +168,8 @@ class Comparison:
         extras = {}
 
         for package, build in self.source2.cache.items():
-            if package not in self.content:
-                logging.info(f'Extras package {package} found in {self.source2}')
+            if package not in self.content and package not in self.prepop_packagelist:
+                logging.debug(f'Extras package {package} found in {self.source2}')
                 extras[package] = {
                     "status": self.status[-3],
                     "nvr1": None,
@@ -155,6 +181,9 @@ class Comparison:
         return extras
 
     def compare_content(self):
+        for package in self.prepop_packagelist:
+            logging.debug(f'Processing package {package}')
+            self.results[package] = self.compare_one(package)
         for package in content:
             logging.debug(f'Processing package {package}')
             self.results[package] = self.compare_one(package)
@@ -219,9 +248,14 @@ def get_content(distro_view="eln"):
     merged_packages = set()
 
     distro_url = "https://tiny.distro.builders"
-    arches = ["aarch64", "armv7hl", "ppc64le", "s390x", "x86_64"]
+    arches = ["aarch64", "ppc64le", "s390x", "x86_64"]
     which_source = ["source", "buildroot-source"]
-
+    
+    # excludes should be changed to a URL / git repo somewhere
+    # Currently they are variables in eln-periodic.py
+    # For now just use a flat file
+    exclude_packagelist = open("lists/exclude.txt").read().splitlines()
+    
     for arch in arches:
         for this_source in which_source:
             url = (
@@ -234,6 +268,8 @@ def get_content(distro_view="eln"):
             r = requests.get(url, allow_redirects=True)
             for line in r.text.splitlines():
                 if not line:
+                    continue
+                if line in exclude_packagelist:
                     continue
                 merged_packages.add(line)
 
