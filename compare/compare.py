@@ -93,17 +93,20 @@ class Comparison:
     }
 
     def __init__(self, content, source1, source2):
+        scriptpath = os.path.dirname(os.path.realpath(__file__))
         self.content = content
         self.source1 = source1
         self.source2 = source2
         # prepop will eventually show up on Content Resolver
         # https://tiny.distro.builders/view--view-eln.html
         # For now just use a flat file
-        self.prepop_packagelist = open("lists/prepop.txt").read().splitlines()
+        prepop_f = os.path.join(scriptpath, "lists/prepop.txt")
+        self.prepop_packagelist = open(prepop_f).read().splitlines()
         # The nosync list should be coming from the distrobaker config yaml file 
         # https://gitlab.cee.redhat.com/osci/distrobaker_config/-/raw/rhel9/distrobaker.yaml
         # For now just use a flat file
-        self.nosync_packagelist = open("lists/nosync.txt").read().splitlines()
+        nosync_f = os.path.join(scriptpath, "lists/nosync.txt")
+        self.nosync_packagelist = open(nosync_f).read().splitlines()
 
         self.results = {}
 
