@@ -19,14 +19,20 @@
       .new {
 	  background-color: #c9daf8 !important;
       }
-      .same {
-	  background-color: #d9ead3 !important;
+      .none {
+	  background-color: #f4cccc !important;
+      }
+      .nosync {
+	  background-color: #d9ccd3 !important;
       }
       .old {
 	  background-color: #fce5cd !important;
       }
-      .none {
-	  background-color: #f4cccc !important;
+      .prepop {
+	  background-color: #d9eaaa !important;
+      }
+      .same {
+	  background-color: #d9ead3 !important;
       }
     </style>
     <title>Status of {{source2}} builds</title>
@@ -34,6 +40,18 @@
   <body>
     <h1>Status of {{source2}} builds</h1>
     <p>Page updated: {{ date }}</p>
+    <table>
+      <tr>
+	{% for status, counter in mstats.items() -%}
+	<td class="{{status}}">
+	  {{status}}: {{counter}}
+	  {% if status != "total" -%}
+          ({{ "{:.2%}".format(counter / mstats.total)}})
+	  {% endif -%}
+	</td>
+	{% endfor -%}
+      </tr>
+    </table>
     <table>
       <tr>
 	{% for status, counter in stats.items() -%}

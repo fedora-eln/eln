@@ -199,6 +199,18 @@ class Comparison:
         stats["total"] = sum(stats.values())
         return stats
 
+    def mcount(self):
+        mstats = {}
+        mstats_list = ["SAME","NEW","OLD","NONE","ERROR"]
+        for item in self.results.values():
+            value = item["status"]
+            if value in mstats_list:
+                if value not in mstats:
+                    mstats[value] = 0
+                mstats[value] += 1
+        mstats["total"] = sum(mstats.values())
+        return mstats
+
     def results_by_status(self):
         """Return dictionary of lists of packages from comparison
 
@@ -231,6 +243,7 @@ class Comparison:
                 source2=self.source2,
                 results=self.results,
                 stats=self.count(),
+                mstats=self.mcount(),
                 date=datetime.datetime.now()
             ).dump(
                 os.path.join(
