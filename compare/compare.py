@@ -12,6 +12,8 @@ import requests
 import rpm
 import sys
 
+SCRIPTPATH = os.path.dirname(os.path.realpath(__file__))
+
 class BuildSource:
 
     def __init__(self, source_id=None, infra=None, tag=None, make_cache=True):
@@ -93,19 +95,18 @@ class Comparison:
     }
 
     def __init__(self, content, source1, source2):
-        scriptpath = os.path.dirname(os.path.realpath(__file__))
         self.content = content
         self.source1 = source1
         self.source2 = source2
         # prepop will eventually show up on Content Resolver
         # https://tiny.distro.builders/view--view-eln.html
         # For now just use a flat file
-        prepop_f = os.path.join(scriptpath, "lists/prepop.txt")
+        prepop_f = os.path.join(SCRIPTPATH, "lists", "prepop.txt")
         self.prepop_packagelist = open(prepop_f).read().splitlines()
         # The nosync list should be coming from the distrobaker config yaml file 
         # https://gitlab.cee.redhat.com/osci/distrobaker_config/-/raw/rhel9/distrobaker.yaml
         # For now just use a flat file
-        nosync_f = os.path.join(scriptpath, "lists/nosync.txt")
+        nosync_f = os.path.join(SCRIPTPATH, "lists", "nosync.txt")
         self.nosync_packagelist = open(nosync_f).read().splitlines()
 
         self.results = {}
@@ -266,12 +267,13 @@ def get_content(distro_view="eln"):
     distro_url = "https://tiny.distro.builders"
     arches = ["aarch64", "ppc64le", "s390x", "x86_64"]
     which_source = ["source", "buildroot-source"]
-    
+
     # excludes should be changed to a URL / git repo somewhere
     # Currently they are variables in eln-periodic.py
     # For now just use a flat file
-    exclude_packagelist = open("lists/exclude.txt").read().splitlines()
-    
+    exclude_f = os.path.join(SCRIPTPATH, "lists", "exclude.txt")
+    exclude_packagelist = open(exclude_f).read().splitlines()
+
     for arch in arches:
         for this_source in which_source:
             url = (
