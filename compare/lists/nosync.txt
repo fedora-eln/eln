@@ -16,6 +16,7 @@ kernel-tools
 kpatch
 llvm-toolset
 lorax
+man-pages-overrides
 qemu
 redhat-release
 rust-toolset
