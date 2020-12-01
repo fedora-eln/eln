@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
     distro_url = "https://tiny.distro.builders"
     distro_view = "eln"
-    arches = ["aarch64", "armv7hl", "ppc64le", "s390x", "x86_64"]
+    arches = ["aarch64", "ppc64le", "s390x", "x86_64"]
     which_source = ["source", "buildroot-source"]
 
     if len(sys.argv) == 2 and sys.argv[1] == "--help":
