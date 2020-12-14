@@ -12,6 +12,7 @@ import re
 import requests
 import rpm
 import sys
+import yaml
 
 SCRIPTPATH = os.path.dirname(os.path.realpath(__file__))
 
@@ -108,11 +109,15 @@ class Comparison:
             logging.debug(f'Placeholder {placeholder_source} put on list')
             if not placeholder_source in self.prepop_packagelist:
                 self.prepop_packagelist.append(placeholder_source)
-        # The nosync list should be coming from the distrobaker config yaml file 
-        # https://gitlab.cee.redhat.com/osci/distrobaker_config/-/raw/rhel9/distrobaker.yaml
-        # For now just use a flat file
-        nosync_f = os.path.join(SCRIPTPATH, "lists", "nosync.txt")
-        self.nosync_packagelist = open(nosync_f).read().splitlines()
+        # Setup NoSync package list
+        self.nosync_packagelist = []
+        nosyncYamlData = {}
+        nosyncURL="https://gitlab.cee.redhat.com/osci/distrobaker_config/-/raw/rhel9/distrobaker.yaml"
+        nosyncYamlData = yaml.safe_load(requests.get(nosyncURL, allow_redirects=True).text)
+        for nosync_source in nosyncYamlData['configuration']['control']['exclude']['rpms']:
+            logging.debug(f'NoSync {nosync_source} put on list')
+            if not nosync_source in self.nosync_packagelist:
+                self.nosync_packagelist.append(nosync_source)
 
         self.results = {}
 
