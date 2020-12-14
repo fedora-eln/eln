@@ -5,6 +5,7 @@ import koji
 import argparse
 import datetime
 import jinja2
+import json
 import logging
 import os
 import re
@@ -98,11 +99,15 @@ class Comparison:
         self.content = content
         self.source1 = source1
         self.source2 = source2
-        # prepop will eventually show up on Content Resolver
-        # https://tiny.distro.builders/view--view-eln.html
-        # For now just use a flat file
-        prepop_f = os.path.join(SCRIPTPATH, "lists", "prepop.txt")
-        self.prepop_packagelist = open(prepop_f).read().splitlines()
+        # Setup PrePopulated package list
+        self.prepop_packagelist = []
+        placeholderJsonData = {}
+        placeholderURL="https://tiny.distro.builders/view-placeholder-srpm-details--view-eln--x86_64.json"
+        placeholderJsonData = json.loads(requests.get(placeholderURL, allow_redirects=True).text)
+        for placeholder_source in placeholderJsonData:
+            logging.debug(f'Placeholder {placeholder_source} put on list')
+            if not placeholder_source in self.prepop_packagelist:
+                self.prepop_packagelist.append(placeholder_source)
         # The nosync list should be coming from the distrobaker config yaml file 
         # https://gitlab.cee.redhat.com/osci/distrobaker_config/-/raw/rhel9/distrobaker.yaml
         # For now just use a flat file
