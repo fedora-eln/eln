@@ -28,7 +28,7 @@
       .old {
 	  background-color: #fce5cd !important;
       }
-      .prepop {
+      .pplace {
 	  background-color: #d9eaaa !important;
       }
       .same {
@@ -63,6 +63,41 @@
 	</td>
 	{% endfor -%}
       </tr>
+    </table>
+    <br>
+    <table>
+      <tr class="ERROR">
+	<td>ERROR</td>
+	<td>Package listed by Content Resolver, but no ELN nor RHEL9 build</td>
+	</tr>
+      <tr class="EXTRA">
+	<td>EXTRA</td>
+	<td>In RHEL9 but not listed by Content Resolver</td>
+	</tr>
+      <tr class="NEW">
+	<td>NEW</td>
+	<td> RHEL9 nvr is newer than ELN</td>
+	</tr>
+      <tr class="NONE">
+	<td>NONE</td>
+	<td>There is an ELN build, but no RHEL9 build</td>
+	</tr>
+      <tr class="NOSYNC">
+	<td>NOSYNC</td>
+	<td>This package is not synced from ELN to RHEL9</td>
+	</tr>
+      <tr class="OLD">
+	<td>OLD</td>
+	<td>RHEL9 nvr is older than ELN</td>
+	</tr>
+      <tr class="PPLACE">
+	<td>PPLACE</td>
+	<td>Package Placeholder</td>
+	</tr>
+      <tr class="SAME">
+	<td>SAME</td>
+	<td>RHEL9 and ELN nvr are the same</td>
+	</tr>
     </table>
     <h2>Details</h2>
     <table id="comparison" style="compact">

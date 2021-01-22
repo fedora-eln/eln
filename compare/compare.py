@@ -85,7 +85,7 @@ class BuildSource:
 class Comparison:
 
     status = {
-        -5: "PREPOP",
+        -5: "PPLACE",
         -4: "NOSYNC",
         -3: "EXTRA",
         -2: "ERROR",
@@ -99,15 +99,15 @@ class Comparison:
         self.content = content
         self.source1 = source1
         self.source2 = source2
-        # Setup PrePopulated package list
-        self.prepop_packagelist = []
+        # Setup PackagePlaceholder package list
+        self.pplace_packagelist = []
         placeholderJsonData = {}
         placeholderURL="https://tiny.distro.builders/view-placeholder-srpm-details--view-eln--x86_64.json"
         placeholderJsonData = json.loads(requests.get(placeholderURL, allow_redirects=True).text)
         for placeholder_source in placeholderJsonData:
             logging.debug(f'Placeholder {placeholder_source} put on list')
-            if not placeholder_source in self.prepop_packagelist:
-                self.prepop_packagelist.append(placeholder_source)
+            if not placeholder_source in self.pplace_packagelist:
+                self.pplace_packagelist.append(placeholder_source)
         # The nosync list should be coming from the distrobaker config yaml file 
         # https://gitlab.cee.redhat.com/osci/distrobaker_config/-/raw/rhel9/distrobaker.yaml
         # For now just use a flat file
@@ -130,7 +130,7 @@ class Comparison:
         build1 = self.source1.get_build(package)
         build2 = self.source2.get_build(package)
 
-        if package in self.prepop_packagelist:
+        if package in self.pplace_packagelist:
             logging.debug(f'Package {package} pre-populated')
             return {
                 "status": self.status[-5],
@@ -177,7 +177,7 @@ class Comparison:
         extras = {}
 
         for package, build in self.source2.cache.items():
-            if package not in self.content and package not in self.prepop_packagelist:
+            if package not in self.content and package not in self.pplace_packagelist:
                 logging.debug(f'Extras package {package} found in {self.source2}')
                 extras[package] = {
                     "status": self.status[-3],
@@ -190,7 +190,7 @@ class Comparison:
         return extras
 
     def compare_content(self):
-        for package in self.prepop_packagelist:
+        for package in self.pplace_packagelist:
             logging.debug(f'Processing package {package}')
             self.results[package] = self.compare_one(package)
         for package in content:
