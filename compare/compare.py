@@ -16,8 +16,16 @@ import sys
 SCRIPTPATH = os.path.dirname(os.path.realpath(__file__))
 
 class BuildSource:
-
-    def __init__(self, source_id=None, infra=None, tag=None, make_cache=True):
+    def __init__(
+        self,
+        source_id=None,
+        infra=None,
+        tag=None,
+        make_cache=True,
+        product=None,
+        distro_url=None,
+        distro_view=None,
+    ):
         """Setup a source of the builds
 
         :infra: Koji or Brew session,
@@ -25,11 +33,13 @@ class BuildSource:
         """
 
         if source_id:
-            infra, tag, product = self._configure_source(source_id)
+            infra, tag, product, distro_url, distro_view = self._configure_source(source_id)
 
         self.infra = infra
         self.tag = tag
         self.product = product
+        self.distro_url = distro_url
+        self.distro_view = distro_view
         self.cache = {}
 
         if make_cache:
@@ -39,6 +49,8 @@ class BuildSource:
         return f'{self.tag}'
 
     def _configure_source(self, source_id):
+        distro_url = "https://tiny.distro.builders"
+        distro_view = "eln"
         if source_id == "rawhide":
             infra = koji.ClientSession('https://koji.fedoraproject.org/kojihub')
             tag = infra.getFullInheritance('rawhide')[0]['name']
@@ -53,16 +65,20 @@ class BuildSource:
             product = "ELN"
         if source_id == "stream":
             infra = koji.ClientSession('https://kojihub.stream.rdu2.redhat.com/kojihub')
-            # FIXME
+            # FIXME?
             tag = "c9s-candidate"
             product = "Stream9"
+            distro_url = "http://dell-per930-01.4a2m.lab.eng.bos.redhat.com/content-resolver"
+            distro_view = "c9s"
         if source_id == "rhel":
             # FIXME
             infra = koji.ClientSession('https://brewhub.engineering.redhat.com/brewhub')
             tag = "rhel-9.0.0-alpha-candidate"
             product = "RHEL9"
+            distro_url = "http://dell-per930-01.4a2m.lab.eng.bos.redhat.com/content-resolver"
+            distro_view = "c9s"
 
-        return infra, tag, product
+        return infra, tag, product, distro_url, distro_view
 
     def get_build(self, package):
         """Find the latest build of a package available in the build source
@@ -113,9 +129,8 @@ class Comparison:
         self.source1 = source1
         self.source2 = source2
 
-        # FIXME: need to make we get this from the correct place
-        distro_url = "https://tiny.distro.builders"
-        distro_view = "eln"
+        distro_url = source2.distro_url
+        distro_view = source2.distro_view
         arches = ["aarch64", "ppc64le", "s390x", "x86_64"]
 
         # Setup PackagePlaceholder package list
@@ -289,15 +304,13 @@ class Comparison:
             )
 
 
-def get_content(distro_view="eln"):
+def get_content(distro_url="https://tiny.distro.builders", distro_view="eln"):
     """Builds the full list of packages for the distro from the Content Resolver
 
     Merges result for all architectures.
     """
     merged_packages = set()
 
-    # FIXME: need to make we get this from the correct place
-    distro_url = "https://tiny.distro.builders"
     arches = ["aarch64", "ppc64le", "s390x", "x86_64"]
     which_source = ["source", "buildroot-source"]
 
@@ -427,7 +440,9 @@ if __name__ == "__main__":
         content = args.packages
         args.cache = False
     else:
-        content = sorted(get_content())
+        content = sorted(
+            get_content(distro_url=source2.distro_url, distro_view=source2.distro_view)
+        )
 
     C = Comparison(content, source1, source2)
 
