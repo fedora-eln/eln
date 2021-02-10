@@ -25,10 +25,11 @@ class BuildSource:
         """
 
         if source_id:
-            infra, tag = self._configure_source(source_id)
+            infra, tag, product = self._configure_source(source_id)
 
         self.infra = infra
         self.tag = tag
+        self.product = product
         self.cache = {}
 
         if make_cache:
@@ -41,15 +42,23 @@ class BuildSource:
         if source_id == "rawhide":
             infra = koji.ClientSession('https://koji.fedoraproject.org/kojihub')
             tag = infra.getFullInheritance('rawhide')[0]['name']
+            product = "Rawhide"
         if source_id == "eln":
             infra = koji.ClientSession('https://koji.fedoraproject.org/kojihub')
             tag = "eln"
+            product = "ELN"
+        if source_id == "stream":
+            infra = koji.ClientSession('https://kojihub.stream.rdu2.redhat.com/kojihub')
+            # FIXME
+            tag = "c9s-candidate"
+            product = "Stream9"
         if source_id == "rhel":
             # FIXME
             infra = koji.ClientSession('https://brewhub.engineering.redhat.com/brewhub')
             tag = "rhel-9.0.0-alpha-candidate"
+            product = "RHEL9"
 
-        return infra, tag
+        return infra, tag, product
 
     def get_build(self, package):
         """Find the latest build of a package available in the build source
@@ -250,6 +259,8 @@ class Comparison:
             tmpl.stream(
                 source1=self.source1,
                 source2=self.source2,
+                product1=self.source1.product,
+                product2=self.source2.product,
                 results=self.results,
                 stats=self.count(),
                 mstats=self.mcount(),
@@ -368,13 +379,13 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "source1",
-        choices=["rawhide", "eln", "rhel"],
+        choices=["rawhide", "eln", "stream", "rhel"],
         help="First source of package builds",
     )
 
     parser.add_argument(
         "source2",
-        choices=["rawhide", "eln", "rhel"],
+        choices=["rawhide", "eln", "stream", "rhel"],
         help="Second source of package builds",
     )
 
