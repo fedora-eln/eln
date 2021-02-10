@@ -43,6 +43,10 @@ class BuildSource:
             infra = koji.ClientSession('https://koji.fedoraproject.org/kojihub')
             tag = infra.getFullInheritance('rawhide')[0]['name']
             product = "Rawhide"
+        if source_id == "fedora":
+            infra = koji.ClientSession('https://koji.fedoraproject.org/kojihub')
+            tag = "f34-cr-eln"
+            product = "Fedora34"
         if source_id == "eln":
             infra = koji.ClientSession('https://koji.fedoraproject.org/kojihub')
             tag = "eln"
@@ -108,15 +112,27 @@ class Comparison:
         self.content = content
         self.source1 = source1
         self.source2 = source2
+
+        # FIXME: need to make we get this from the correct place
+        distro_url = "https://tiny.distro.builders"
+        distro_view = "eln"
+        arches = ["aarch64", "ppc64le", "s390x", "x86_64"]
+
         # Setup PackagePlaceholder package list
         self.pplace_packagelist = []
-        placeholderJsonData = {}
-        placeholderURL="https://tiny.distro.builders/view-placeholder-srpm-details--view-eln--x86_64.json"
-        placeholderJsonData = json.loads(requests.get(placeholderURL, allow_redirects=True).text)
-        for placeholder_source in placeholderJsonData:
-            logging.debug(f'Placeholder {placeholder_source} put on list')
-            if not placeholder_source in self.pplace_packagelist:
-                self.pplace_packagelist.append(placeholder_source)
+
+        for arch in arches:
+            placeholderJsonData = {}
+            placeholderURL = (
+                "{distro_url}"
+                "/view-placeholder-srpm-details--view-{distro_view}--{arch}.json"
+            ).format(distro_url=distro_url, distro_view=distro_view, arch=arch)
+            placeholderJsonData = json.loads(requests.get(placeholderURL, allow_redirects=True).text)
+            for placeholder_source in placeholderJsonData:
+                logging.debug(f'Placeholder {placeholder_source} put on list')
+                if not placeholder_source in self.pplace_packagelist:
+                    self.pplace_packagelist.append(placeholder_source)
+
         # The nosync list should be coming from the distrobaker config yaml file 
         # https://gitlab.cee.redhat.com/osci/distrobaker_config/-/raw/rhel9/distrobaker.yaml
         # For now just use a flat file
@@ -280,6 +296,7 @@ def get_content(distro_view="eln"):
     """
     merged_packages = set()
 
+    # FIXME: need to make we get this from the correct place
     distro_url = "https://tiny.distro.builders"
     arches = ["aarch64", "ppc64le", "s390x", "x86_64"]
     which_source = ["source", "buildroot-source"]
@@ -379,13 +396,13 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "source1",
-        choices=["rawhide", "eln", "stream", "rhel"],
+        choices=["rawhide", "fedora", "eln", "stream", "rhel"],
         help="First source of package builds",
     )
 
     parser.add_argument(
         "source2",
-        choices=["rawhide", "eln", "stream", "rhel"],
+        choices=["rawhide", "fedora", "eln", "stream", "rhel"],
         help="Second source of package builds",
     )
 
