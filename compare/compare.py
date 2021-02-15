@@ -16,8 +16,16 @@ import sys
 SCRIPTPATH = os.path.dirname(os.path.realpath(__file__))
 
 class BuildSource:
-
-    def __init__(self, source_id=None, infra=None, tag=None, make_cache=True):
+    def __init__(
+        self,
+        source_id=None,
+        infra=None,
+        tag=None,
+        make_cache=True,
+        product=None,
+        distro_url=None,
+        distro_view=None,
+    ):
         """Setup a source of the builds
 
         :infra: Koji or Brew session,
@@ -25,11 +33,13 @@ class BuildSource:
         """
 
         if source_id:
-            infra, tag, product = self._configure_source(source_id)
+            infra, tag, product, distro_url, distro_view = self._configure_source(source_id)
 
         self.infra = infra
         self.tag = tag
         self.product = product
+        self.distro_url = distro_url
+        self.distro_view = distro_view
         self.cache = {}
 
         if make_cache:
@@ -39,26 +49,36 @@ class BuildSource:
         return f'{self.tag}'
 
     def _configure_source(self, source_id):
+        distro_url = "https://tiny.distro.builders"
+        distro_view = "eln"
         if source_id == "rawhide":
             infra = koji.ClientSession('https://koji.fedoraproject.org/kojihub')
             tag = infra.getFullInheritance('rawhide')[0]['name']
             product = "Rawhide"
+        if source_id == "fedora":
+            infra = koji.ClientSession('https://koji.fedoraproject.org/kojihub')
+            tag = "f34-cr-eln"
+            product = "Fedora34"
         if source_id == "eln":
             infra = koji.ClientSession('https://koji.fedoraproject.org/kojihub')
             tag = "eln"
             product = "ELN"
         if source_id == "stream":
             infra = koji.ClientSession('https://kojihub.stream.rdu2.redhat.com/kojihub')
-            # FIXME
+            # FIXME?
             tag = "c9s-candidate"
             product = "Stream9"
+            distro_url = "http://dell-per930-01.4a2m.lab.eng.bos.redhat.com/content-resolver"
+            distro_view = "c9s"
         if source_id == "rhel":
             # FIXME
             infra = koji.ClientSession('https://brewhub.engineering.redhat.com/brewhub')
             tag = "rhel-9.0.0-alpha-candidate"
             product = "RHEL9"
+            distro_url = "http://dell-per930-01.4a2m.lab.eng.bos.redhat.com/content-resolver"
+            distro_view = "c9s"
 
-        return infra, tag, product
+        return infra, tag, product, distro_url, distro_view
 
     def get_build(self, package):
         """Find the latest build of a package available in the build source
@@ -108,15 +128,26 @@ class Comparison:
         self.content = content
         self.source1 = source1
         self.source2 = source2
+
+        distro_url = source2.distro_url
+        distro_view = source2.distro_view
+        arches = ["aarch64", "ppc64le", "s390x", "x86_64"]
+
         # Setup PackagePlaceholder package list
         self.pplace_packagelist = []
-        placeholderJsonData = {}
-        placeholderURL="https://tiny.distro.builders/view-placeholder-srpm-details--view-eln--x86_64.json"
-        placeholderJsonData = json.loads(requests.get(placeholderURL, allow_redirects=True).text)
-        for placeholder_source in placeholderJsonData:
-            logging.debug(f'Placeholder {placeholder_source} put on list')
-            if not placeholder_source in self.pplace_packagelist:
-                self.pplace_packagelist.append(placeholder_source)
+
+        for arch in arches:
+            placeholderJsonData = {}
+            placeholderURL = (
+                "{distro_url}"
+                "/view-placeholder-srpm-details--view-{distro_view}--{arch}.json"
+            ).format(distro_url=distro_url, distro_view=distro_view, arch=arch)
+            placeholderJsonData = json.loads(requests.get(placeholderURL, allow_redirects=True).text)
+            for placeholder_source in placeholderJsonData:
+                logging.debug(f'Placeholder {placeholder_source} put on list')
+                if not placeholder_source in self.pplace_packagelist:
+                    self.pplace_packagelist.append(placeholder_source)
+
         # The nosync list should be coming from the distrobaker config yaml file 
         # https://gitlab.cee.redhat.com/osci/distrobaker_config/-/raw/rhel9/distrobaker.yaml
         # For now just use a flat file
@@ -273,14 +304,13 @@ class Comparison:
             )
 
 
-def get_content(distro_view="eln"):
+def get_content(distro_url="https://tiny.distro.builders", distro_view="eln"):
     """Builds the full list of packages for the distro from the Content Resolver
 
     Merges result for all architectures.
     """
     merged_packages = set()
 
-    distro_url = "https://tiny.distro.builders"
     arches = ["aarch64", "ppc64le", "s390x", "x86_64"]
     which_source = ["source", "buildroot-source"]
 
@@ -379,13 +409,13 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "source1",
-        choices=["rawhide", "eln", "stream", "rhel"],
+        choices=["rawhide", "fedora", "eln", "stream", "rhel"],
         help="First source of package builds",
     )
 
     parser.add_argument(
         "source2",
-        choices=["rawhide", "eln", "stream", "rhel"],
+        choices=["rawhide", "fedora", "eln", "stream", "rhel"],
         help="Second source of package builds",
     )
 
@@ -410,7 +440,9 @@ if __name__ == "__main__":
         content = args.packages
         args.cache = False
     else:
-        content = sorted(get_content())
+        content = sorted(
+            get_content(distro_url=source2.distro_url, distro_view=source2.distro_view)
+        )
 
     C = Comparison(content, source1, source2)
 
