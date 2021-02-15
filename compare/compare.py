@@ -68,14 +68,14 @@ class BuildSource:
             # FIXME?
             tag = "c9s-candidate"
             product = "Stream9"
-            distro_url = "http://dell-per930-01.4a2m.lab.eng.bos.redhat.com/content-resolver"
+            distro_url = "https://raw.githubusercontent.com/minimization/lists/main"
             distro_view = "c9s"
         if source_id == "rhel":
             # FIXME
             infra = koji.ClientSession('https://brewhub.engineering.redhat.com/brewhub')
             tag = "rhel-9.0.0-alpha-candidate"
             product = "RHEL9"
-            distro_url = "http://dell-per930-01.4a2m.lab.eng.bos.redhat.com/content-resolver"
+            distro_url = "https://raw.githubusercontent.com/minimization/lists/main"
             distro_view = "c9s"
 
         return infra, tag, product, distro_url, distro_view
