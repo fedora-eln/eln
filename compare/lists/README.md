@@ -13,11 +13,3 @@ These are the packages that should not be synced from Fedora to RHEL and/or Cent
 This list is in a yaml file here - https://gitlab.cee.redhat.com/osci/distrobaker_config/-/raw/rhel9/distrobaker.yaml
 
 compare.py now gets this information from the above URL. The nosync.txt file is no longer used by compare.py and will go away soon.
-
-## prepop.txt
-These are packages that are PrePopulated in the Content Resolver workloads.
-
-The list is exposes as a json at https://tiny.distro.builders/view-placeholder-srpm-details--view-eln--x86_64.json
-
-compare.py now gets this information from the above URL. The prepop.txt file is no longer used by compare.py and will go away soon.
-
