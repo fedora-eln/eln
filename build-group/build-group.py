@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 from datetime import datetime as dt
+from datetime import timedelta as td
 import argparse
 import os
 import koji
@@ -105,9 +106,13 @@ def group_rebuild_list(builds):
     return rebuild_groups
 
 def show_groups(groups):
+    eta = 0
     for group in groups:
         nvrs = [build["nvr"] for build in group]
+        durations = [build["completion_ts"] - build["start_ts"] for build in group]
+        eta += max(durations)
         print(", ".join(nvrs))
+    print(td(seconds=eta))
 
 if __name__ == "__main__":
 
