@@ -21,6 +21,7 @@ class BuildSource:
         source_id=None,
         infra=None,
         tag=None,
+        tag2=None,
         make_cache=True,
         product=None,
         distro_url=None,
@@ -33,10 +34,11 @@ class BuildSource:
         """
 
         if source_id:
-            infra, tag, product, distro_url, distro_view = self._configure_source(source_id)
+            infra, tag, tag2, product, distro_url, distro_view = self._configure_source(source_id)
 
         self.infra = infra
         self.tag = tag
+        self.tag2 = tag2
         self.product = product
         self.distro_url = distro_url
         self.distro_view = distro_view
@@ -46,7 +48,7 @@ class BuildSource:
             self.make_cache()
 
     def __str__(self):
-        return f'{self.tag}'
+        return f'{self.product}'
 
     def _configure_source(self, source_id):
         distro_url = "https://tiny.distro.builders"
@@ -54,19 +56,23 @@ class BuildSource:
         if source_id == "rawhide":
             infra = koji.ClientSession('https://koji.fedoraproject.org/kojihub')
             tag = infra.getFullInheritance('rawhide')[0]['name']
+            tag2 = None
             product = "Rawhide"
         if source_id == "fedora":
             infra = koji.ClientSession('https://koji.fedoraproject.org/kojihub')
             tag = "f34-cr-eln"
+            tag2 = None
             product = "Fedora34"
         if source_id == "eln":
             infra = koji.ClientSession('https://koji.fedoraproject.org/kojihub')
             tag = "eln"
+            tag2 = None
             product = "ELN"
         if source_id == "stream":
             infra = koji.ClientSession('https://kojihub.stream.rdu2.redhat.com/kojihub')
             # FIXME?
-            tag = "c9s-candidate"
+            tag = "c9s-gate"
+            tag2 = "c9s-pending"
             product = "Stream9"
             distro_url = "https://raw.githubusercontent.com/minimization/lists/main"
             distro_view = "c9s"
@@ -74,11 +80,12 @@ class BuildSource:
             # FIXME
             infra = koji.ClientSession('https://brewhub.engineering.redhat.com/brewhub')
             tag = "rhel-9.0.0-alpha-candidate"
+            tag2 = "rhel-9.0.0-beta-candidate"
             product = "RHEL9"
             distro_url = "https://raw.githubusercontent.com/minimization/lists/main"
             distro_view = "c9s"
 
-        return infra, tag, product, distro_url, distro_view
+        return infra, tag, tag2, product, distro_url, distro_view
 
     def get_build(self, package):
         """Find the latest build of a package available in the build source
@@ -108,6 +115,17 @@ class BuildSource:
         builds = self.infra.listTagged(self.tag, latest=True)
         for build in builds:
             self.cache[build["name"]] = build
+        if self.tag2:
+            logging.info(f' Working on second tag: {self.tag2}')
+            builds2 = self.infra.listTagged(self.tag2, latest=True)
+            for build2 in builds2:
+                if build2["name"] in self.cache:
+                    result = compare_builds(build2, self.cache[build2["name"]])
+                else:
+                    result = 1
+                if result == 1:
+                    self.cache[build2["name"]] = build2
+                    logging.info(f'  Updated cache for {build2["name"]}')
         logging.debug(f'Done making cache for {self}')
 
 
