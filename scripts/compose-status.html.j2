@@ -1,0 +1,33 @@
+<html>
+  <head>
+    <title>ELN Compose Status</title>
+  </head>
+  <body>
+    <h1>ELN Production Compose Status</h1>
+    <p>Page updated: {{ this_date }}
+    <h2>Last Compose</h2>
+      <p  style="background-color:{{ last['color'] }}"><b>{{ last['status'] }}</b>
+        <br>ID: {{ last['id'] }}
+        <br>Start: {{ last['started'] }}
+        <br>Stop: {{ last['finished'] }}
+        <br><a href="{{ last['url'] }}">{{ last['url'] }}</a>
+      </p>
+      <p ><b>Status Reason:</b>
+        <br>{{ last['status_reason'] }}
+      </p>
+
+    <h1>Latest Compose History</h1>
+      {% for p in composes -%}
+    <h2>{{ p['id'] }}</h2>
+      <p  style="background-color:{{ p['color'] }}"><b>{{ p['status'] }}</b>
+        <br>Start: {{ p['started'] }}
+        <br>Stop: {{ p['finished'] }}
+        <br><a href="{{ p['url'] }}">{{ p['url'] }}</a>
+      </p>
+      <p ><b>Status Reason:</b>
+        <br>{{ p['status_reason'] }}
+      </p>
+      {% endfor -%}
+    </table>
+  </body>
+</html>
