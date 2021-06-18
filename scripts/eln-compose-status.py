@@ -37,7 +37,7 @@ for this_compose in jsonData['items']:
 
 with open(TEMPLATEFILE) as fi:
     tmpli = Template(fi.read())
-with open('output/compose-status.html', 'w') as w:
+with open('compose-status.html', 'w') as w:
     w.write(tmpli.render(
         this_date=datetime.datetime.now().strftime('%Y-%m-%d %H:%M'),
         last=latest_compose,
