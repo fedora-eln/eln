@@ -1,0 +1,166 @@
+---
+name: Check Fedora ELN repositories' closure every week
+permissions:
+  issues: write
+  pull-requests: read
+  contents: read
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Running every Monday 6:00 UTC
+    - cron: '0 6 * * 1'
+
+jobs:
+  eln-baseos:
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/fedoraci/fedora:eln
+    steps:
+      - name: Run repoclosure on ELN BaseOS
+        run: |
+            dnf5 repoclosure --newest --refresh --check eln-baseos --disablerepo=eln-crb,eln-extras,eln-appstream 
+
+  eln-appstream:
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/fedoraci/fedora:eln
+    steps:
+      - name: Run repoclosure on ELN AppStream
+        run: |
+            dnf5 repoclosure --newest --refresh --check eln-appstream --disablerepo=eln-crb,eln-extras
+
+  eln-crb:
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/fedoraci/fedora:eln
+    steps:
+      - name: Run repoclosure on ELN CRB
+        run: |
+            dnf5 repoclosure --newest --refresh --check eln-crb --disablerepo=eln-extras
+
+  eln-extras:
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/fedoraci/fedora:eln
+    steps:
+      - name: Run repoclosure on ELN Extras
+        run: |
+            dnf5 repoclosure --newest --refresh --check eln-extras
+
+  eln-ha:
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/fedoraci/fedora:eln
+    steps:
+      - name: Run repoclosure on ELN HighAvailability
+        run: |
+            dnf5 repoclosure --newest --refresh --check eln-ha --disablerepo=eln-extras --enablerepo=eln-ha
+
+  eln-nfv:
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/fedoraci/fedora:eln
+    steps:
+      - name: Run repoclosure on ELN NFV
+        run: |
+            dnf5 repoclosure --newest --refresh --check eln-nfv --disablerepo=eln-extras --enablerepo=eln-nfv
+
+  eln-rs:
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/fedoraci/fedora:eln
+    steps:
+      - name: Run repoclosure on ELN Resilient Storage
+        run: |
+            dnf5 repoclosure --newest --refresh --check eln-rs --disablerepo=eln-extras --enablerepo=eln-rs
+
+  eln-rt:
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/fedoraci/fedora:eln
+    steps:
+      - name: Run repoclosure on ELN RT
+        run: |
+            dnf5 repoclosure --newest --refresh --check eln-rt --disablerepo=eln-extras --enablerepo=eln-rt
+
+  eln-sap:
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/fedoraci/fedora:eln
+    steps:
+      - name: Run repoclosure on ELN SAP
+        run: |
+            dnf5 repoclosure --newest --refresh --check eln-sap --disablerepo=eln-extras --enablerepo=eln-sap
+
+  eln-saphana:
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/fedoraci/fedora:eln
+    steps:
+      - name: Run repoclosure on ELN SAP HANA
+        run: |
+            dnf5 repoclosure --newest --refresh --check eln-saphana --disablerepo=eln-extras --enablerepo=eln-saphana
+
+  close-issue-on-success:
+    name: Report workflow success
+    runs-on: ubuntu-latest
+    needs:
+      - eln-baseos
+      - eln-extras
+      - eln-crb
+      - eln-appstream
+      - eln-ha
+      - eln-nfv
+      - eln-rs
+      - eln-rt
+      - eln-sap
+      - eln-saphana
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Add a comment about successful job and close issue
+        run: |
+          set -e
+          LABEL="repoclosure-failed"
+          ISSUENO=$(gh issue list -l $LABEL | awk ' { print $1 } ' | head -n 1)
+          if [ -n "$ISSUENO" ]; then
+              MESSAGE="✅ The repoclosure CI job is now [successful](https://github.com/fedora-eln/eln/actions/runs/${{ github.run_id }}), closing issue."
+              gh issue comment "${ISSUENO}" --body "${MESSAGE}"
+              gh issue close "${ISSUENO}"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  open-issue-on-failure:
+    name: Report workflow failure
+    runs-on: ubuntu-latest
+    if: ${{ always() && (needs.eln-baseos.result=='failure' || needs.eln-extras.result=='failure' || needs.eln-crb.result=='failure' || needs.eln-appstream.result=='failure' || needs.eln-ha.result=='failure' || needs.eln-nfv.result=='failure' || needs.eln-rs.result=='failure' || needs.eln-rt.result=='failure' || needs.eln-sap.result=='failure' || needs.eln-saphana.result=='failure') }}
+    needs:
+      - eln-baseos
+      - eln-extras
+      - eln-crb
+      - eln-appstream
+      - eln-ha
+      - eln-nfv
+      - eln-rs
+      - eln-rt
+      - eln-sap
+      - eln-saphana
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Add a comment about failed job
+        run: |
+          set -e
+          TITLE="Failed repoclosure job"
+          LABEL="repoclosure-failed"
+          ISSUENO=$(gh issue list -l $LABEL | awk ' { print $1 } ' | head -n 1)
+          if [ -z "$ISSUENO" ]; then
+              MESSAGE="❌ The repoclosure CI job failed. [Please investigate.](https://github.com/fedora-eln/eln/actions/runs/${{ github.run_id }})"
+              gh issue create --title "${TITLE}" --body "${MESSAGE}" --label "${LABEL}"
+          else
+              MESSAGE="❌ The repoclosure CI job is still failing. [Please investigate.](https://github.com/fedora-eln/eln/actions/runs/${{ github.run_id }})"
+              gh issue comment "${ISSUENO}" --body "${MESSAGE}"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
