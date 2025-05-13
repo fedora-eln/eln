@@ -1,8 +1,6 @@
 # Fedora ELN
 
-Main repository for the [Fedora ELN](https://docs.fedoraproject.org/en-US/eln/) project.
-
-Used to store various scripts and as a main issue tracker.
+Issue tracker for the [Fedora ELN](https://docs.fedoraproject.org/en-US/eln/) project.
 
 ## Other repositories
 
@@ -15,7 +13,3 @@ Used to store various scripts and as a main issue tracker.
   
 * Content Definition
   * https://github.com/minimization/content-resolver-input
-
-## ./scripts
-
-Assorted scripts for maintaining Fedora ELN
