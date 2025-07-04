@@ -4,12 +4,18 @@ Issue tracker for the [Fedora ELN](https://docs.fedoraproject.org/en-US/eln/) pr
 
 ## Other repositories
 
-* Documentation - https://github.com/fedora-eln/eln-docs
+* Documentation
+  * https://github.com/fedora-eln/eln-docs
+
+* Branding
+  * https://github.com/fedora-eln/backgrounds
+  * https://github.com/fedora-eln/logos
 
 * CI Pipelines:
-  * https://github.com/fedora-ci/eln-periodic
-  * https://github.com/fedora-ci/eln-build-trigger
-  * https://github.com/fedora-ci/eln-build-pipeline
+  * https://gitlab.com/redhat/centos-stream/ci-cd/distrosync/distrobuildsync
+  * https://gitlab.com/redhat/centos-stream/ci-cd/distrosync/distrobuildsync-config
+  * https://gitlab.com/redhat/centos-stream/ci-cd/distrosync/distrobuildsync-deploy
   
 * Content Definition
+  * https://github.com/minimization/content-resolver
   * https://github.com/minimization/content-resolver-input
