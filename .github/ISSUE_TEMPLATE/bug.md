@@ -1,6 +1,6 @@
 ---
 name: Bug Report
-about: Create a bug report for the ELN SIG
+about: Report a bug in ELN
 type: Bug
 labels: triage
 

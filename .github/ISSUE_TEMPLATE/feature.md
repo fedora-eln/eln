@@ -1,5 +1,5 @@
 ---
-name: New Feature Request
+name: Feature Request
 about: Create a request for a feature enhancement in ELN
 type: Feature
 labels: triage

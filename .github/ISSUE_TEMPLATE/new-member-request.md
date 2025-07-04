@@ -1,5 +1,5 @@
 ---
-name: New Member Request
+name: Membership Request
 about: Request membership in the ELN SIG
 title: 'SIG Membership Request: <name>'
 type: Task
