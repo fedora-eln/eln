@@ -2,6 +2,7 @@
 name: New Member Request
 about: Request membership in the ELN SIG
 title: 'SIG Membership Request: <name>'
+type: Task
 labels: new member
 assignees: yselkowitz
 
